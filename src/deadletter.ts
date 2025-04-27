@@ -1,15 +1,4 @@
-import { DeadLetterQueue, Event } from "./types.ts";
-
-/**
- * Entry in the dead letter queue
- */
-interface DeadLetterEntry {
-  event: Event;
-  error: string;
-  subscription: string;
-  timestamp: number;
-  attempts: number;
-}
+import { DeadLetterQueue, DeadLetterEntry, Event } from "./types.ts";
 
 /**
  * In-memory implementation of a dead letter queue
@@ -21,11 +10,11 @@ export class SimpleDeadLetterQueue implements DeadLetterQueue {
   /**
    * Add a failed event to the dead letter queue
    */
-  async addEvent(
+  addEvent(
     event: Event,
     error: Error,
     subscriptionName: string
-  ): Promise<void> {
+  ): void {
     this.entries.set(event.id, {
       event,
       error: error.message,
@@ -38,13 +27,13 @@ export class SimpleDeadLetterQueue implements DeadLetterQueue {
   /**
    * Get failed events from the queue with optional filtering
    */
-  async getEvents(
+  getEvents(
     options: {
       topic?: string;
       eventType?: string;
       limit?: number;
     } = {}
-  ): Promise<Array<DeadLetterEntry>> {
+  ): DeadLetterEntry[] {
     let entries = Array.from(this.entries.values());
 
     // Apply filters
@@ -73,7 +62,7 @@ export class SimpleDeadLetterQueue implements DeadLetterQueue {
    * Retry processing a failed event
    * Returns true if the event was found and retried
    */
-  async retryEvent(eventId: string): Promise<boolean> {
+  retryEvent(eventId: string): boolean {
     const entry = this.entries.get(eventId);
     if (!entry) {
       return false;
@@ -93,7 +82,7 @@ export class SimpleDeadLetterQueue implements DeadLetterQueue {
   /**
    * Remove an event from the dead letter queue
    */
-  async removeEvent(eventId: string): Promise<boolean> {
+  removeEvent(eventId: string): boolean {
     return this.entries.delete(eventId);
   }
 }
@@ -145,7 +134,7 @@ export class FileDeadLetterQueue implements DeadLetterQueue {
       eventType?: string;
       limit?: number;
     } = {}
-  ): Promise<Array<DeadLetterEntry>> {
+  ): Promise<DeadLetterEntry[]> {
     const entries: DeadLetterEntry[] = [];
 
     try {
