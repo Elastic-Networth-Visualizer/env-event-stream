@@ -26,7 +26,7 @@
     "include": ["src/", "tests/", "*.json"],
     "indentWidth": 2,
     "lineWidth": 100,
-    "semiColons": true,
+    "semiColons": false,
     "singleQuote": false
   },
   "tasks": {

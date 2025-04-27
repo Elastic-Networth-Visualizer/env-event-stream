@@ -64,7 +64,7 @@ await defaultBroker.publish<UserCreatedEvent>("users", "user.created", {
 
 The library is designed around several key components:
 
-![Architecture Diagram](https://raw.githubusercontent.com/elastic-networth-visualizer/env-event-stream/main/architecture.svg)
+![Architecture Diagram](/architecture.svg)
 
 - **EventBroker**: Central hub for coordinating event flow
 - **Topic**: Channel for specific event categories
