@@ -87,7 +87,7 @@ The `EventBroker` is the central hub that manages topics and facilitates event d
 const broker = new EventBroker();
 
 // Or use the default shared instance
-import { defaultBroker } from "https://deno.land/x/env_event_stream/mod.ts";
+import { defaultBroker } from "@env/env-event-stream";
 ```
 
 ### Topics
@@ -133,7 +133,7 @@ subscription.resume(); // Resume receiving events
 Ensure events conform to expected schemas.
 
 ```typescript
-import { JsonSchemaRegistry } from "https://deno.land/x/env_event_stream/mod.ts";
+import { JsonSchemaRegistry } from "@env/env-event-stream";
 
 // Create a schema registry
 const schemaRegistry = new JsonSchemaRegistry();
@@ -164,7 +164,7 @@ const userTopic = broker.createTopic("users", {
 Store events for later replay and analysis.
 
 ```typescript
-import { FileEventStore } from "https://deno.land/x/env_event_stream/mod.ts";
+import { FileEventStore } from "@env/env-event-stream";
 
 // Create a file-based event store
 const eventStore = new FileEventStore("./event_store");
@@ -186,7 +186,7 @@ for (const event of events) {
 Handle failed event processing with robust retry mechanisms.
 
 ```typescript
-import { FileDeadLetterQueue } from "https://deno.land/x/env_event_stream/mod.ts";
+import { FileDeadLetterQueue } from "@env/env-event-stream";
 
 // Create a file-based dead letter queue
 const deadLetterQueue = new FileDeadLetterQueue("./dead_letter_queue");
@@ -208,7 +208,7 @@ for (const entry of failedEvents) {
 Build event-sourced applications with aggregates and repositories.
 
 ```typescript
-import { AggregateRoot, EventSourcedRepository } from "https://deno.land/x/env_event_stream/mod.ts";
+import { AggregateRoot, EventSourcedRepository } from "@env/env-event-stream";
 
 // Define a user aggregate
 class User extends AggregateRoot<{ username: string; email: string }> {
@@ -258,7 +258,7 @@ box, you can create your own database implementations:
 ### Creating a Database-Backed Event Store
 
 ```typescript
-import { Event, EventStore } from "https://deno.land/x/env_event_stream/mod.ts";
+import { Event, EventStore } from "@env/env-event-stream";
 
 class PostgresEventStore implements EventStore {
   private client: PostgresClient;
@@ -341,7 +341,7 @@ import {
   DeadLetterEntry,
   DeadLetterQueue,
   Event,
-} from "https://deno.land/x/env_event_stream/mod.ts";
+} from "@env/env-event-stream";
 
 class MongoDeadLetterQueue implements DeadLetterQueue {
   private collection: MongoCollection;
