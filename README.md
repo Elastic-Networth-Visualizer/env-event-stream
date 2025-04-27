@@ -461,7 +461,7 @@ const pgEventStore = new PostgresEventStore(
 );
 
 // Create a broker that uses this store
-const broker = new EventBroker({ eventStore: pgEventStore });
+const broker = new EventBroker(pgEventStore);
 
 // Periodic checkpoint for event sourcing
 const checkpointInterval = 100;
