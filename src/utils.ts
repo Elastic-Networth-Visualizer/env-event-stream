@@ -1,8 +1,4 @@
 /**
- * Utilities for the env-event-stream library
- */
-
-/**
  * Generate a cryptographically secure, random, collision-resistant ID
  * Used as a replacement for the UUID library
  *

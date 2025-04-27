@@ -17,7 +17,7 @@ export class EventBroker {
     this.eventStore = new InMemoryEventStore();
     this.deadLetterQueue = new SimpleDeadLetterQueue();
   }
-  
+
   /**
    * Create a new topic
    */
