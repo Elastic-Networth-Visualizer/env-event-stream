@@ -4,8 +4,8 @@ A high-performance, feature-rich event stream library for Deno that serves as th
 event-driven architectures.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![deno compatibility](https://shield.deno.dev/deno/^1.34)](https://deno.land/x/env_event_stream)
 [![JSR module](https://jsr.io/badges/@env/env-event-stream)](https://jsr.io/@env/env-event-stream)
+[![Deno](https://img.shields.io/badge/deno-v2.2.12-green.svg)](https://deno.land/)
 
 ## Overview
 
@@ -28,11 +28,12 @@ need a reliable way to handle application events, this library offers the tools 
 
 ## Installation
 
-### From JSR (JavaScript Registry)
+```bash
+# Using Deno
+deno add jsr:@env/env-event-stream
 
-```typescript
-// Import from JSR registry
-import { EventBroker } from "@env/env-event-stream";
+# Using npm
+npx jsr add @env/env-event-stream
 ```
 
 ## Quick Start
