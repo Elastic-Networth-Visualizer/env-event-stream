@@ -4,7 +4,7 @@ A high-performance, feature-rich event stream library for Deno that serves as th
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![deno compatibility](https://shield.deno.dev/deno/^1.34)](https://deno.land/x/env_event_stream)
-[![JSR module](https://jsr.io/badges/@elasticnetworthvisualizer/env-event-stream)](https://jsr.io/@elasticnetworthvisualizer/env-event-stream)
+[![JSR module](https://jsr.io/badges/@env/event-stream)](https://jsr.io/@env/event-stream)
 
 ## Overview
 
@@ -32,7 +32,7 @@ import { EventBroker } from "https://deno.land/x/env_event_stream/mod.ts";
 
 ```typescript
 // Import from JSR registry
-import { EventBroker } from "@elasticnetworthvisualizer/env-event-stream";
+import { EventBroker } from "@env/event-stream";
 ```
 
 ## Quick Start
