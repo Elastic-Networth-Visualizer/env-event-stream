@@ -6,10 +6,6 @@ on:
     workflows:
       - CI
 
-  push:
-    branches:
-      - main
-
 jobs:
   publish:
     runs-on: ubuntu-latest
