@@ -1,9 +1,9 @@
 import { Event, EventHandler, PublishResult, SubscriptionOptions, TopicOptions } from "./types.ts";
-import { v4 as uuid } from "https://deno.land/std@0.182.0/uuid/mod.ts";
 import { Topic } from "./topic.ts";
 import { Subscription } from "./subscription.ts";
 import { InMemoryEventStore } from "./persistence.ts";
 import { SimpleDeadLetterQueue } from "./deadletter.ts";
+import { generateId } from "./utils.ts";
 
 /**
  * Core event broker that manages topics and event distribution
@@ -85,7 +85,7 @@ export class EventBroker {
     }
     
     const event: Event<T> = {
-      id: uuid(),
+      id: generateId(),
       type: eventType,
       topic: topicName,
       timestamp: Date.now(),

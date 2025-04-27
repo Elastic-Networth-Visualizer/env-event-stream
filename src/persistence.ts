@@ -10,69 +10,79 @@ export class InMemoryEventStore implements EventStore {
   /**
    * Save an event to storage
    */
-  async saveEvent(event: Event): Promise<void> {
-    if (!this.events.has(event.topic)) {
-      this.events.set(event.topic, []);
-    }
-    
-    this.events.get(event.topic)!.push(event);
+  saveEvent(event: Event): Promise<void> {
+    return new Promise((resolve) => {
+      if (!this.events.has(event.topic)) {
+        this.events.set(event.topic, []);
+      }
+      
+      this.events.get(event.topic)!.push(event);
+      resolve();
+    });  
   }
   
   /**
    * Get events for a topic with optional filtering
    */
-  async getEvents(topic: string, options: {
+  getEvents(topic: string, options: {
     fromTimestamp?: number;
     toTimestamp?: number;
     limit?: number;
     eventTypes?: string[];
   } = {}): Promise<Event[]> {
-    if (!this.events.has(topic)) {
-      return [];
-    }
-    
-    let events = this.events.get(topic)!;
-    
-    // Apply timestamp filters
-    if (options.fromTimestamp) {
-      events = events.filter(e => e.timestamp >= options.fromTimestamp!);
-    }
-    
-    if (options.toTimestamp) {
-      events = events.filter(e => e.timestamp <= options.toTimestamp!);
-    }
-    
-    // Filter by event types if specified
-    if (options.eventTypes?.length) {
-      events = events.filter(e => options.eventTypes!.includes(e.type));
-    }
-    
-    // Sort by timestamp (oldest first)
-    events = events.sort((a, b) => a.timestamp - b.timestamp);
-    
-    // Apply limit if specified
-    if (options.limit) {
-      events = events.slice(0, options.limit);
-    }
-    
-    return events;
+    return new Promise((resolve) => {
+      if (!this.events.has(topic)) {
+        resolve([]);
+        return;
+      }
+      
+      let events = this.events.get(topic)!;
+      
+      // Apply timestamp filters
+      if (options.fromTimestamp) {
+        events = events.filter(e => e.timestamp >= options.fromTimestamp!);
+      }
+      
+      if (options.toTimestamp) {
+        events = events.filter(e => e.timestamp <= options.toTimestamp!);
+      }
+      
+      // Filter by event types if specified
+      if (options.eventTypes?.length) {
+        events = events.filter(e => options.eventTypes!.includes(e.type));
+      }
+      
+      // Sort by timestamp (oldest first)
+      events = events.sort((a, b) => a.timestamp - b.timestamp);
+      
+      // Apply limit if specified
+      if (options.limit) {
+        events = events.slice(0, options.limit);
+      }
+
+      resolve(events);
+    })
   }
   
   /**
    * Delete events before a specific timestamp
    */
-  async deleteEvents(topic: string, beforeTimestamp: number): Promise<number> {
-    if (!this.events.has(topic)) {
-      return 0;
-    }
-    
-    const originalLength = this.events.get(topic)!.length;
-    this.events.set(
-      topic,
-      this.events.get(topic)!.filter(e => e.timestamp >= beforeTimestamp)
-    );
-    
-    return originalLength - this.events.get(topic)!.length;
+  deleteEvents(topic: string, beforeTimestamp: number): Promise<number> {
+    return new Promise((resolve) => {
+      if (!this.events.has(topic)) {
+        resolve(0);
+        return;
+      }
+      
+      const events = this.events.get(topic)!;
+      const initialCount = events.length;
+      
+      // Filter out events that are older than the specified timestamp
+      this.events.set(topic, events.filter(e => e.timestamp >= beforeTimestamp));
+      
+      const deletedCount = initialCount - this.events.get(topic)!.length;
+      resolve(deletedCount);
+    });
   }
 }
 

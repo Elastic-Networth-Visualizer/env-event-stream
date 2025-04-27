@@ -1,4 +1,6 @@
+// deno-lint-ignore-file require-await
 import { Event } from "./types.ts";
+import { generateId } from "./utils.ts";
 
 /**
  * Base class for event-sourced entities
@@ -94,7 +96,7 @@ export abstract class AggregateRoot<State> extends EventSourcedEntity<State> {
     metadata: Record<string, unknown> = {}
   ): void {
     const event: Event<T> = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       type: eventType,
       topic: `aggregate.${this.id}`,
       timestamp: Date.now(),

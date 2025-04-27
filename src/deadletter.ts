@@ -14,13 +14,16 @@ export class SimpleDeadLetterQueue implements DeadLetterQueue {
     event: Event,
     error: Error,
     subscriptionName: string
-  ): void {
-    this.entries.set(event.id, {
-      event,
-      error: error.message,
-      subscription: subscriptionName,
-      timestamp: Date.now(),
-      attempts: 1,
+  ): Promise<void> {
+    return new Promise((resolve) => {
+      this.entries.set(event.id, {
+        event,
+        error: error.message,
+        subscription: subscriptionName,
+        timestamp: Date.now(),
+        attempts: 1,
+      });
+      resolve();
     });
   }
 
@@ -33,57 +36,57 @@ export class SimpleDeadLetterQueue implements DeadLetterQueue {
       eventType?: string;
       limit?: number;
     } = {}
-  ): DeadLetterEntry[] {
-    let entries = Array.from(this.entries.values());
+  ): Promise<DeadLetterEntry[]> {
+    return new Promise((resolve) => {
+      let entries = Array.from(this.entries.values());
 
-    // Apply filters
-    if (options.topic) {
-      entries = entries.filter((entry) => entry.event.topic === options.topic);
-    }
+      // Apply filters
+      if (options.topic) {
+        entries = entries.filter((entry) => entry.event.topic === options.topic);
+      }
 
-    if (options.eventType) {
-      entries = entries.filter(
-        (entry) => entry.event.type === options.eventType
-      );
-    }
+      if (options.eventType) {
+        entries = entries.filter(
+          (entry) => entry.event.type === options.eventType
+        );
+      }
 
-    // Sort by timestamp (newest first)
-    entries = entries.sort((a, b) => b.timestamp - a.timestamp);
+      // Sort by timestamp (newest first)
+      entries.sort((a, b) => b.timestamp - a.timestamp);
 
-    // Apply limit if specified
-    if (options.limit && options.limit > 0) {
-      entries = entries.slice(0, options.limit);
-    }
+      // Apply limit if specified
+      if (options.limit && options.limit > 0) {
+        entries = entries.slice(0, options.limit);
+      }
 
-    return entries;
+      resolve(entries);
+    });
   }
 
   /**
    * Retry processing a failed event
    * Returns true if the event was found and retried
    */
-  retryEvent(eventId: string): boolean {
-    const entry = this.entries.get(eventId);
+  retryEvent(eventId: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const entry = this.entries.get(eventId);
     if (!entry) {
-      return false;
+      return resolve(false);
     }
 
     // Increment attempt count
     entry.attempts += 1;
-
-    // Note: In a real implementation, we would re-dispatch the event
-    // to the original subscriber. For this simple implementation,
-    // we'll just update the entry and leave actual re-delivery
-    // to the calling code.
-
-    return true;
+    return resolve(true);
+    });
   }
 
   /**
    * Remove an event from the dead letter queue
    */
-  removeEvent(eventId: string): boolean {
-    return this.entries.delete(eventId);
+  removeEvent(eventId: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      resolve(this.entries.delete(eventId))
+    });
   }
 }
 

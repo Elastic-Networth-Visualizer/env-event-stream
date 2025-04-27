@@ -153,22 +153,22 @@ export interface DeadLetterEntry {
    * The event that failed processing
    */
   event: Event;
-
+  
   /**
    * Error message or reason for failure
    */
   error: string;
-
+  
   /**
    * The subscription that was processing the event
    */
   subscription: string;
-
+  
   /**
    * When the event was added to the dead letter queue
    */
   timestamp: number;
-
+  
   /**
    * Number of processing attempts
    */
@@ -210,7 +210,7 @@ export interface DeadLetterQueue {
   /**
    * Add a failed event to the dead letter queue
    */
-  addEvent(event: Event, error: Error, subscriptionName: string): Promise<void> | void;
+  addEvent(event: Event, error: Error, subscriptionName: string): Promise<void>;
 
   /**
    * Get failed events from the queue
@@ -219,15 +219,15 @@ export interface DeadLetterQueue {
     topic?: string;
     eventType?: string;
     limit?: number;
-  }): Promise<DeadLetterEntry[]> | DeadLetterEntry[];
+  }): Promise<DeadLetterEntry[]>;
 
   /**
    * Retry processing a failed event
    */
-  retryEvent(eventId: string): Promise<boolean> | boolean;
+  retryEvent(eventId: string): Promise<boolean>;
 
   /**
    * Remove an event from the dead letter queue
    */
-  removeEvent(eventId: string): Promise<boolean> | boolean;
+  removeEvent(eventId: string): Promise<boolean>;
 }
