@@ -12,7 +12,7 @@ Deno.test("EventBroker - Create Topic", () => {
 
 Deno.test("EventBroker - Subscribe and Publish", async () => {
   const broker = new EventBroker();
-  let receivedEvent: Event<unknown> | null = null;
+  let receivedEvent: Event<unknown> | undefined;
 
   const subscription = broker.subscribe("test-topic", (event) => {
     receivedEvent = event;
@@ -26,12 +26,12 @@ Deno.test("EventBroker - Subscribe and Publish", async () => {
   assertEquals(result.receiverCount, 1);
   assertExists(receivedEvent);
   assertEquals(receivedEvent.type, "test-event");
-  assertEquals(receivedEvent.payload.message, "Hello, World!");
+  assertEquals(receivedEvent.payload, { message: "Hello, World!" });
 });
 
 Deno.test("EventBroker - Event Filtering", async () => {
   const broker = new EventBroker();
-  let receivedEvents: string[] = [];
+  const receivedEvents: string[] = [];
 
   broker.subscribe("test-topic", (event) => {
     receivedEvents.push(event.type);
