@@ -23,7 +23,7 @@
     }
   },
   "fmt": {
-    "include": ["src/", "tests/", "*.md", "*.json"],
+    "include": ["src/", "tests/", "*.json"],
     "indentWidth": 2,
     "lineWidth": 100,
     "semiColons": true,
