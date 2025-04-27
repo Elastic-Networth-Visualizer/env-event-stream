@@ -71,7 +71,7 @@ await defaultBroker.publish<UserCreatedEvent>("users", "user.created", {
 
 The library is designed around several key components:
 
-![Architecture Diagram](https://deno.land/x/env_event_stream/docs/architecture.svg)
+![Architecture Diagram](https://raw.githubusercontent.com/elastic-networth-visualizer/env-event-stream/main/architecture.svg)
 
 - **EventBroker**: Central hub for coordinating event flow
 - **Topic**: Channel for specific event categories
