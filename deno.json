@@ -38,7 +38,7 @@
   },
   "exports": "./mod.ts",
   "dependencies": {
-    "@deno/postgres": "0.7.2"
+    "@std/assert": "jsr:@std/assert@1"
   },
   "publish": {
     "exclude": [

@@ -1,7 +1,5 @@
-import { Event, EventHandler, SubscriptionOptions, TopicOptions } from "./types.ts";
+import { DeadLetterQueue, Event, EventHandler, EventStore, SubscriptionOptions, TopicOptions } from "./types.ts";
 import { Subscription } from "./subscription.ts";
-import { InMemoryEventStore } from "./persistence.ts";
-import { SimpleDeadLetterQueue } from "./deadletter.ts";
 import { generateId } from "./utils.ts";
 
 /**
@@ -12,13 +10,13 @@ export class Topic {
   private name: string;
   private subscriptions: Map<string, Subscription> = new Map();
   private options: TopicOptions;
-  private eventStore: InMemoryEventStore;
-  private deadLetterQueue: SimpleDeadLetterQueue;
+  private eventStore: EventStore;
+  private deadLetterQueue: DeadLetterQueue;
 
   constructor(
     name: string,
-    eventStore: InMemoryEventStore,
-    deadLetterQueue: SimpleDeadLetterQueue,
+    eventStore: EventStore,
+    deadLetterQueue: DeadLetterQueue,
     options: TopicOptions = {},
   ) {
     this.name = name;

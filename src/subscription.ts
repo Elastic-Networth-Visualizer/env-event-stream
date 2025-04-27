@@ -1,5 +1,4 @@
-import { Event, EventHandler, SubscriptionOptions } from "./types.ts";
-import { SimpleDeadLetterQueue } from "./deadletter.ts";
+import { DeadLetterQueue, Event, EventHandler, SubscriptionOptions } from "./types.ts";
 
 /**
  * @description Represents a subscription to a topic.
@@ -10,14 +9,14 @@ export class Subscription {
   private topicName: string;
   private handler: EventHandler;
   private options: SubscriptionOptions;
-  private deadLetterQueue: SimpleDeadLetterQueue;
+  private deadLetterQueue: DeadLetterQueue;
   private active: boolean = true;
 
   constructor(
     id: string,
     topicName: string,
     handler: EventHandler,
-    deadLetterQueue: SimpleDeadLetterQueue,
+    deadLetterQueue: DeadLetterQueue,
     options: SubscriptionOptions = {},
   ) {
     this.id = id;

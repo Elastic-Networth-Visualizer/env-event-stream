@@ -28,24 +28,17 @@ need a reliable way to handle application events, this library offers the tools 
 
 ## Installation
 
-### From Deno Registry
-
-```typescript
-// Import directly from Deno registry
-import { EventBroker } from "https://deno.land/x/env_event_stream/mod.ts";
-```
-
 ### From JSR (JavaScript Registry)
 
 ```typescript
 // Import from JSR registry
-import { EventBroker } from "@env/event-stream";
+import { EventBroker } from "@env/env-event-stream";
 ```
 
 ## Quick Start
 
 ```typescript
-import { defaultBroker } from "https://deno.land/x/env_event_stream/mod.ts";
+import { defaultBroker } from "@env/env-event-stream";
 
 // Define event payload type
 interface UserCreatedEvent {
