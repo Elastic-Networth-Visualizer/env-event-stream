@@ -1,0 +1,50 @@
+# .github/workflows/publish.yml
+name: Publish
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  publish-deno:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+
+      - name: Publish to Deno Land
+        run: |
+          deno install -A --no-check -n eggs https://x.nest.land/eggs@0.3.10/eggs.ts
+          eggs link ${{ secrets.NEST_LAND_API_KEY }}
+          eggs publish --yes
+
+  publish-npm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Build NPM package
+        run: deno task build:npm ${{ github.ref_name }}
+
+      - name: Publish to NPM
+        run: npm publish
+        working-directory: ./npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

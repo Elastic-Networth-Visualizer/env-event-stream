@@ -1,0 +1,61 @@
+{
+  "name": "@env/event-stream",
+  "version": "1.0.0",
+  "description": "A high-performance, feature-rich event stream library for Deno, the backbone for event-driven architectures",
+  "author": "Elastic Networth Visualizer",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/elastic-networth-visualizer/env-event-stream.git"
+  },
+  "compilerOptions": {
+    "allowJs": false,
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "lint": {
+    "include": ["src/", "tests/", "examples/"],
+    "rules": {
+      "tags": ["recommended"]
+    }
+  },
+  "fmt": {
+    "include": ["src/", "tests/", "examples/", "*.md", "*.json"],
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "semiColons": true,
+    "singleQuote": false
+  },
+  "tasks": {
+    "test": "deno test --allow-read --allow-write",
+    "lint": "deno lint",
+    "fmt": "deno fmt",
+    "check": "deno check mod.ts",
+    "build:npm": "deno run --allow-read --allow-write --allow-env --allow-net --allow-run npm_build.ts"
+  },
+  "exports": {
+    ".": "./mod.ts",
+    "./broker": "./src/broker.ts",
+    "./topic": "./src/topic.ts",
+    "./subscription": "./src/subscription.ts",
+    "./persistence": "./src/persistence.ts",
+    "./deadletter": "./src/deadletter.ts",
+    "./schema": "./src/schema.ts",
+    "./sourcing": "./src/sourcing.ts",
+    "./types": "./src/types.ts"
+  },
+  "publish": {
+    "exclude": [
+      "npm_build.ts",
+      ".github",
+      ".vscode",
+      "node_modules",
+      "npm",
+      ".git"
+    ]
+  }
+}
