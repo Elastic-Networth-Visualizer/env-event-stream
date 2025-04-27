@@ -10,6 +10,7 @@ export type {
   SchemaRegistry,
   EventStore,
   DeadLetterQueue,
+  DeadLetterEntry,  // Added DeadLetterEntry interface export
 } from "./src/types.ts";
 
 // Export broker implementation
@@ -28,6 +29,9 @@ export {
 
 // Export schema validation
 export { JsonSchemaRegistry } from "./src/schema.ts";
+
+// Export utility functions
+export { generateId } from "./src/utils.ts";  // Added utility function export
 
 // Export event sourcing
 export {
