@@ -1,4 +1,10 @@
-import { Event, EventHandler, PublishResult, SubscriptionOptions, TopicOptions } from "./types.ts";
+import {
+  Event,
+  EventHandler,
+  PublishResult,
+  SubscriptionOptions,
+  TopicOptions,
+} from "./types.ts";
 import { Topic } from "./topic.ts";
 import { Subscription } from "./subscription.ts";
 import { InMemoryEventStore } from "./persistence.ts";
@@ -12,7 +18,7 @@ export class EventBroker {
   private topics: Map<string, Topic> = new Map();
   private eventStore: InMemoryEventStore;
   private deadLetterQueue: SimpleDeadLetterQueue;
-  
+
   constructor() {
     this.eventStore = new InMemoryEventStore();
     this.deadLetterQueue = new SimpleDeadLetterQueue();
@@ -25,50 +31,55 @@ export class EventBroker {
     if (this.topics.has(topicName)) {
       return this.topics.get(topicName)!;
     }
-    
-    const topic = new Topic(topicName, this.eventStore, this.deadLetterQueue, options);
+
+    const topic = new Topic(
+      topicName,
+      this.eventStore,
+      this.deadLetterQueue,
+      options
+    );
     this.topics.set(topicName, topic);
     return topic;
   }
-  
+
   /**
    * Get an existing topic
    */
   getTopic(topicName: string): Topic | undefined {
     return this.topics.get(topicName);
   }
-  
+
   /**
    * Delete a topic
    */
   deleteTopic(topicName: string): boolean {
     return this.topics.delete(topicName);
   }
-  
+
   /**
    * List all topic names
    */
   getTopicNames(): string[] {
     return Array.from(this.topics.keys());
   }
-  
+
   /**
    * Subscribe to events on a topic
    */
   subscribe<T = unknown>(
-    topicName: string, 
+    topicName: string,
     handler: EventHandler<T>,
     options: SubscriptionOptions = {}
   ): Subscription {
     let topic = this.topics.get(topicName);
-    
+
     if (!topic) {
       topic = this.createTopic(topicName);
     }
-    
+
     return topic.subscribe(handler, options);
   }
-  
+
   /**
    * Publish an event to a topic
    */
@@ -79,57 +90,57 @@ export class EventBroker {
     metadata: Record<string, unknown> = {}
   ): Promise<PublishResult> {
     let topic = this.topics.get(topicName);
-    
+
     if (!topic) {
       topic = this.createTopic(topicName);
     }
-    
+
     const event: Event<T> = {
       id: generateId(),
       type: eventType,
       topic: topicName,
       timestamp: Date.now(),
-      schemaVersion: '1.0',
+      schemaVersion: "1.0",
       payload,
-      metadata
+      metadata,
     };
-    
+
     try {
       const receiverCount = await topic.publish(event);
       return {
         success: true,
         eventId: event.id,
-        receiverCount
+        receiverCount,
       };
     } catch (error) {
       return {
         success: false,
         eventId: event.id,
         receiverCount: 0,
-        error
+        error,
       };
     }
   }
-  
+
   /**
    * Get the dead letter queue instance
    */
-  getDeadLetterQueue() {
+  getDeadLetterQueue(): SimpleDeadLetterQueue {
     return this.deadLetterQueue;
   }
-  
+
   /**
    * Get the event store instance
    */
-  getEventStore() {
+  getEventStore(): InMemoryEventStore {
     return this.eventStore;
   }
-  
+
   /**
    * Replay historical events from a topic to a handler
    */
   async replayEvents<T = unknown>(
-    topicName: string, 
+    topicName: string,
     handler: EventHandler<T>,
     options: {
       fromTimestamp?: number;
@@ -139,14 +150,14 @@ export class EventBroker {
     } = {}
   ): Promise<number> {
     const events = await this.eventStore.getEvents(topicName, options);
-    
+
     for (const event of events) {
       await handler(event as Event<T>);
     }
-    
+
     return events.length;
   }
 }
 
 // Create default singleton instance
-export const defaultBroker = new EventBroker();
+export const defaultBroker: EventBroker = new EventBroker();
