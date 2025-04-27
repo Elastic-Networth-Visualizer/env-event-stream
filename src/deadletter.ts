@@ -1,4 +1,4 @@
-import { DeadLetterQueue, DeadLetterEntry, Event } from "./types.ts";
+import { DeadLetterEntry, DeadLetterQueue, Event } from "./types.ts";
 
 /**
  * In-memory implementation of a dead letter queue
@@ -13,7 +13,7 @@ export class SimpleDeadLetterQueue implements DeadLetterQueue {
   addEvent(
     event: Event,
     error: Error,
-    subscriptionName: string
+    subscriptionName: string,
   ): Promise<void> {
     return new Promise((resolve) => {
       this.entries.set(event.id, {
@@ -35,19 +35,21 @@ export class SimpleDeadLetterQueue implements DeadLetterQueue {
       topic?: string;
       eventType?: string;
       limit?: number;
-    } = {}
+    } = {},
   ): Promise<DeadLetterEntry[]> {
     return new Promise((resolve) => {
       let entries = Array.from(this.entries.values());
 
       // Apply filters
       if (options.topic) {
-        entries = entries.filter((entry) => entry.event.topic === options.topic);
+        entries = entries.filter(
+          (entry) => entry.event.topic === options.topic,
+        );
       }
 
       if (options.eventType) {
         entries = entries.filter(
-          (entry) => entry.event.type === options.eventType
+          (entry) => entry.event.type === options.eventType,
         );
       }
 
@@ -70,13 +72,13 @@ export class SimpleDeadLetterQueue implements DeadLetterQueue {
   retryEvent(eventId: string): Promise<boolean> {
     return new Promise((resolve) => {
       const entry = this.entries.get(eventId);
-    if (!entry) {
-      return resolve(false);
-    }
+      if (!entry) {
+        return resolve(false);
+      }
 
-    // Increment attempt count
-    entry.attempts += 1;
-    return resolve(true);
+      // Increment attempt count
+      entry.attempts += 1;
+      return resolve(true);
     });
   }
 
@@ -85,7 +87,7 @@ export class SimpleDeadLetterQueue implements DeadLetterQueue {
    */
   removeEvent(eventId: string): Promise<boolean> {
     return new Promise((resolve) => {
-      resolve(this.entries.delete(eventId))
+      resolve(this.entries.delete(eventId));
     });
   }
 }
@@ -117,7 +119,7 @@ export class FileDeadLetterQueue implements DeadLetterQueue {
   async addEvent(
     event: Event,
     error: Error,
-    subscriptionName: string
+    subscriptionName: string,
   ): Promise<void> {
     const entry: DeadLetterEntry = {
       event,
@@ -136,7 +138,7 @@ export class FileDeadLetterQueue implements DeadLetterQueue {
       topic?: string;
       eventType?: string;
       limit?: number;
-    } = {}
+    } = {},
   ): Promise<DeadLetterEntry[]> {
     const entries: DeadLetterEntry[] = [];
 

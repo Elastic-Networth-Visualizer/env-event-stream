@@ -1,10 +1,4 @@
-import {
-  Event,
-  EventHandler,
-  PublishResult,
-  SubscriptionOptions,
-  TopicOptions,
-} from "./types.ts";
+import { Event, EventHandler, PublishResult, SubscriptionOptions, TopicOptions } from "./types.ts";
 import { Topic } from "./topic.ts";
 import { Subscription } from "./subscription.ts";
 import { InMemoryEventStore } from "./persistence.ts";
@@ -36,7 +30,7 @@ export class EventBroker {
       topicName,
       this.eventStore,
       this.deadLetterQueue,
-      options
+      options,
     );
     this.topics.set(topicName, topic);
     return topic;
@@ -69,7 +63,7 @@ export class EventBroker {
   subscribe<T = unknown>(
     topicName: string,
     handler: EventHandler<T>,
-    options: SubscriptionOptions = {}
+    options: SubscriptionOptions = {},
   ): Subscription {
     let topic = this.topics.get(topicName);
 
@@ -87,7 +81,7 @@ export class EventBroker {
     topicName: string,
     eventType: string,
     payload: T,
-    metadata: Record<string, unknown> = {}
+    metadata: Record<string, unknown> = {},
   ): Promise<PublishResult> {
     let topic = this.topics.get(topicName);
 
@@ -147,7 +141,7 @@ export class EventBroker {
       toTimestamp?: number;
       eventTypes?: string[];
       limit?: number;
-    } = {}
+    } = {},
   ): Promise<number> {
     const events = await this.eventStore.getEvents(topicName, options);
 

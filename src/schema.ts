@@ -25,8 +25,7 @@ interface JsonSchema {
  * A schema registry that validates events against JSON schemas
  */
 export class JsonSchemaRegistry implements SchemaRegistry {
-  private schemas: Map<string, { schema: JsonSchema; version: string }> =
-    new Map();
+  private schemas: Map<string, { schema: JsonSchema; version: string }> = new Map();
 
   /**
    * Register a schema for an event type
@@ -56,7 +55,7 @@ export class JsonSchemaRegistry implements SchemaRegistry {
     // Check schema version
     if (event.schemaVersion !== schemaEntry.version) {
       console.warn(
-        `Event schema version mismatch: expected ${schemaEntry.version}, got ${event.schemaVersion}`
+        `Event schema version mismatch: expected ${schemaEntry.version}, got ${event.schemaVersion}`,
       );
       // We'll still validate, but with a warning
     }
@@ -118,7 +117,7 @@ export class JsonSchemaRegistry implements SchemaRegistry {
           if (
             !this.validateAgainstSchema(
               objData[propName],
-              propSchema as JsonSchema
+              propSchema as JsonSchema,
             )
           ) {
             return false;

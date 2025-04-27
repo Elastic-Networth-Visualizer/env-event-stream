@@ -17,13 +17,13 @@
     "noUnusedParameters": true
   },
   "lint": {
-    "include": ["src/", "tests/", "examples/"],
+    "include": ["src/", "tests/"],
     "rules": {
       "tags": ["recommended"]
     }
   },
   "fmt": {
-    "include": ["src/", "tests/", "examples/", "*.md", "*.json"],
+    "include": ["src/", "tests/", "*.md", "*.json"],
     "indentWidth": 2,
     "lineWidth": 100,
     "semiColons": true,

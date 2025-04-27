@@ -42,7 +42,7 @@ export interface Event<T = unknown> {
  * Function signature for event handlers
  */
 export type EventHandler<T = unknown> = (
-  event: Event<T>
+  event: Event<T>,
 ) => Promise<void> | void;
 
 /**
@@ -153,22 +153,22 @@ export interface DeadLetterEntry {
    * The event that failed processing
    */
   event: Event;
-  
+
   /**
    * Error message or reason for failure
    */
   error: string;
-  
+
   /**
    * The subscription that was processing the event
    */
   subscription: string;
-  
+
   /**
    * When the event was added to the dead letter queue
    */
   timestamp: number;
-  
+
   /**
    * Number of processing attempts
    */
@@ -194,7 +194,7 @@ export interface EventStore {
       toTimestamp?: number;
       limit?: number;
       eventTypes?: string[];
-    }
+    },
   ): Promise<Event[]>;
 
   /**

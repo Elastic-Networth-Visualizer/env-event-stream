@@ -28,7 +28,7 @@ export function generateId(): string {
   // Random component (11 chars)
   const randomPart = Array.from(
     crypto.getRandomValues(new Uint8Array(8)),
-    (byte) => byte.toString(16).padStart(2, "0")
+    (byte) => byte.toString(16).padStart(2, "0"),
   )
     .join("")
     .substring(0, 11);
