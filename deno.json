@@ -36,7 +36,18 @@
     "check": "deno check mod.ts",
     "build:npm": "deno run --allow-read --allow-write --allow-env --allow-net --allow-run npm_build.ts"
   },
-  "exports": "./mod.ts",
+  "exports": {
+    ".": "./mod.ts",
+    "./broker": "./src/broker.ts",
+    "./topic": "./src/topic.ts",
+    "./subscription": "./src/subscription.ts",
+    "./persistence": "./src/persistence.ts",
+    "./deadletter": "./src/deadletter.ts",
+    "./schema": "./src/schema.ts",
+    "./sourcing": "./src/sourcing.ts",
+    "./utils": "./src/utils.ts",
+    "./types": "./src/types.ts"
+  },
   "dependencies": {
     "@deno/postgres": "0.7.2"
   },
