@@ -20,13 +20,14 @@
     "include": ["src/", "tests/"],
     "rules": {
       "tags": ["recommended"]
-    }
+    },
+    "report": "pretty"
   },
   "fmt": {
     "include": ["src/", "tests/", "*.json"],
     "indentWidth": 2,
     "lineWidth": 100,
-    "semiColons": false,
+    "semiColons": true,
     "singleQuote": false
   },
   "tasks": {

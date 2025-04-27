@@ -1,5 +1,11 @@
 name: Publish
 on:
+  workflow_run:
+    types:
+      - completed
+    workflows:
+      - CI
+
   push:
     branches:
       - main

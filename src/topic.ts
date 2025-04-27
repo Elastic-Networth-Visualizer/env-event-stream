@@ -24,7 +24,7 @@ export class Topic {
     name: string,
     eventStore: EventStore,
     deadLetterQueue: DeadLetterQueue,
-    options: TopicOptions = {}
+    options: TopicOptions = {},
   ) {
     this.name = name;
     this.options = {
@@ -54,7 +54,7 @@ export class Topic {
    */
   subscribe<T = unknown>(
     handler: EventHandler<T>,
-    options: SubscriptionOptions = {}
+    options: SubscriptionOptions = {},
   ): Subscription {
     const subscriptionId = options.name || generateId();
     const subscription = new Subscription(
@@ -62,7 +62,7 @@ export class Topic {
       this.name,
       handler as EventHandler<unknown>,
       this.deadLetterQueue,
-      options
+      options,
     );
 
     this.subscriptions.set(subscriptionId, subscription);
@@ -78,7 +78,7 @@ export class Topic {
             subscription.deliver(event).catch((error) => {
               console.error(
                 `Error delivering historical event ${event.id}:`,
-                error
+                error,
               );
             });
           }
@@ -102,7 +102,7 @@ export class Topic {
     // Validate event schema if a registry is available
     if (this.options.schemaRegistry) {
       const isValid = await this.options.schemaRegistry.validate(
-        event as Event
+        event as Event,
       );
       if (!isValid) {
         throw new Error(`Event validation failed for type ${event.type}`);
@@ -132,12 +132,10 @@ export class Topic {
       deliveryPromises.push(
         subscription.deliver(event as Event).catch((error) => {
           console.error(
-            `Error delivering event ${
-              event.id
-            } to subscription ${subscription.getId()}:`,
-            error
+            `Error delivering event ${event.id} to subscription ${subscription.getId()}:`,
+            error,
           );
-        })
+        }),
       );
     }
 
