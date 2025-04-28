@@ -1,11 +1,22 @@
+<div align="center">
+
 # env-event-stream
+
+<img src="./docs/logo.png" alt="env-event-stream logo" width="200"/>
+</div>
+
+<div align="center">
+
+![Build Status](https://img.shields.io/github/actions/workflow/status/Elastic-Networth-Visualizer/env-event-stream/ci.yml?branch=main&label=Build&logo=github&style=flat-square)
+[![Join our Discord](https://img.shields.io/discord/1366303314173759558?color=purple&label=Join%20us&logo=discord)](https://discord.gg/JU9QqKFG)
+[![Deno](https://img.shields.io/badge/deno-v2.2.12-green.svg)](https://deno.land/)
+[![JSR module](https://jsr.io/badges/@env/env-event-stream)](https://jsr.io/@env/env-event-stream)
+[![JSR module](https://jsr.io/badges/@env/env-event-stream/score)](https://jsr.io/@env/env-event-stream)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 A high-performance, feature-rich event stream library for Deno that serves as the backbone for
 event-driven architectures.
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![JSR module](https://jsr.io/badges/@env/env-event-stream)](https://jsr.io/@env/env-event-stream)
-[![Deno](https://img.shields.io/badge/deno-v2.2.12-green.svg)](https://deno.land/)
+</div>
 
 ## Overview
 
