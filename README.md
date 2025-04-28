@@ -2,7 +2,7 @@
 
 # env-event-stream
 
-<img src="./docs/logo.png" alt="env-event-stream logo" width="200"/>
+<img src="/docs/logo.png" alt="env-event-stream logo" width="200"/>
 </div>
 
 <div align="center">
@@ -76,7 +76,7 @@ await defaultBroker.publish<UserCreatedEvent>("users", "user.created", {
 
 The library is designed around several key components:
 
-![Architecture Diagram](/architecture.svg)
+![Architecture Diagram](/docs/architecture.svg)
 
 - **EventBroker**: Central hub for coordinating event flow
 - **Topic**: Channel for specific event categories
