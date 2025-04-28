@@ -13,6 +13,7 @@ async function buildNpm() {
     package: {
       name: "@elasticnetworthvisualizer/env-event-stream",
       version: Deno.args[0] || "1.0.0",
+      private: false, 
       description: "A high-performance, feature-rich event stream library for event-driven architectures",
       author: "Elastic Networth Visualizer",
       license: "MIT",
