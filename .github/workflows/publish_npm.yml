@@ -30,6 +30,10 @@ jobs:
         with:
           node-version: 20
 
+      # Configure npm authentication
+      - name: Configure npm authentication
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+
       # Build the npm package
       - name: Build npm package
         run: deno run --allow-read --allow-write --allow-net --allow-env --allow-run npm_build.ts ${{ github.event.release.tag_name }}
