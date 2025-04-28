@@ -1,11 +1,11 @@
 import { build, emptyDir } from "https://deno.land/x/dnt@0.38.1/mod.ts";
 
 async function buildNpm() {
-  await emptyDir("./npm");
+  await emptyDir("npm");
 
   await build({
     entryPoints: ["./mod.ts"],
-    outDir: "./npm",
+    outDir: "npm",
     shims: {
       deno: true,
       crypto: true,
@@ -42,12 +42,6 @@ async function buildNpm() {
     compilerOptions: {
       lib: ["ES2021", "DOM"],
       target: "ES2021",
-    },
-    mappings: {
-      "https://deno.land/std@0.182.0/uuid/mod.ts": {
-        name: "uuid",
-        version: "^9.0.0",
-      }
     }
   });
 
