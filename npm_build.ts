@@ -11,7 +11,7 @@ async function buildNpm() {
       crypto: true,
     },
     package: {
-      name: "env-event-stream",
+      name: "@elasticnetworthvisualizer/env-event-stream",
       version: Deno.args[0] || "1.0.0",
       description: "A high-performance, feature-rich event stream library for event-driven architectures",
       author: "Elastic Networth Visualizer",
@@ -32,7 +32,7 @@ async function buildNpm() {
         "typescript"
       ],
       engines: {
-        "node": ">=16.0.0"
+        "node": ">=20.0.0",
       }
     },
     typeCheck: "both",
