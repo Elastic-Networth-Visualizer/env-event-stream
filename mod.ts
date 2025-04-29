@@ -38,4 +38,5 @@ export {
   EventSourcedEntity,
   AggregateRoot,
   EventSourcedRepository,
+  RepositoryFactory
 } from "./src/sourcing.ts";
