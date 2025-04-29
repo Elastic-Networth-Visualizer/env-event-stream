@@ -141,15 +141,15 @@ export class EventSourcedRepository<T extends AggregateRoot<unknown>> {
 
   /**
    * Create a new repository for a specific aggregate type
-   * 
+   *
    * @param aggregateFactory - Function to create a new instance of the aggregate
    * @param eventStore - Event store implementation
    * @param aggregateType - Type name for this aggregate (used for topic naming)
    */
   constructor(
-    aggregateFactory: (id: string) => T, 
+    aggregateFactory: (id: string) => T,
     eventStore: EventStore,
-    aggregateType: string
+    aggregateType: string,
   ) {
     this.aggregateFactory = aggregateFactory;
     this.eventStore = eventStore;
@@ -158,7 +158,7 @@ export class EventSourcedRepository<T extends AggregateRoot<unknown>> {
 
   /**
    * Save an aggregate and its uncommitted events
-   * 
+   *
    * @param aggregate - The aggregate to save
    * @throws Error if there's a problem saving events
    */
@@ -174,17 +174,21 @@ export class EventSourcedRepository<T extends AggregateRoot<unknown>> {
       for (const event of uncommittedEvents) {
         await this.eventStore.saveEvent(event);
       }
-      
+
       // Mark events as committed
       aggregate.markEventsAsCommitted();
     } catch (error) {
-      throw new Error(`Failed to save aggregate ${aggregate.getId()}: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to save aggregate ${aggregate.getId()}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
     }
   }
 
   /**
    * Get an aggregate by ID, rehydrating it from its event stream
-   * 
+   *
    * @param id - The aggregate ID
    * @returns The rehydrated aggregate or null if not found
    */
@@ -206,13 +210,15 @@ export class EventSourcedRepository<T extends AggregateRoot<unknown>> {
 
       return aggregate;
     } catch (error) {
-      throw new Error(`Failed to load aggregate ${id}: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to load aggregate ${id}: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
   /**
    * Check if an aggregate with the given ID exists
-   * 
+   *
    * @param id - The aggregate ID
    * @returns True if the aggregate exists
    */
@@ -224,7 +230,7 @@ export class EventSourcedRepository<T extends AggregateRoot<unknown>> {
 
   /**
    * Get events for an aggregate with optional filtering
-   * 
+   *
    * @param id - The aggregate ID
    * @param options - Filter options
    * @returns Array of events
@@ -236,7 +242,7 @@ export class EventSourcedRepository<T extends AggregateRoot<unknown>> {
       toTimestamp?: number;
       limit?: number;
       eventTypes?: string[];
-    } = {}
+    } = {},
   ): Promise<Event[]> {
     const topicName = this.getTopicName(id);
     return await this.eventStore.getEvents(topicName, options);
@@ -245,7 +251,7 @@ export class EventSourcedRepository<T extends AggregateRoot<unknown>> {
   /**
    * Delete events for an aggregate before a specific timestamp
    * Useful for implementing retention policies
-   * 
+   *
    * @param id - The aggregate ID
    * @param beforeTimestamp - Delete events before this timestamp
    * @returns Number of events deleted
@@ -257,7 +263,7 @@ export class EventSourcedRepository<T extends AggregateRoot<unknown>> {
 
   /**
    * Generate the topic name for an aggregate
-   * 
+   *
    * @param id - The aggregate ID
    * @returns The topic name
    */
@@ -272,26 +278,26 @@ export class EventSourcedRepository<T extends AggregateRoot<unknown>> {
  */
 export class RepositoryFactory {
   private eventStore: EventStore;
-  
+
   constructor(eventStore: EventStore) {
     this.eventStore = eventStore;
   }
-  
+
   /**
    * Create a repository for a specific aggregate type
-   * 
+   *
    * @param aggregateFactory - Function to create a new instance of the aggregate
    * @param aggregateType - Type name for this aggregate
    * @returns A new repository instance
    */
   createRepository<T extends AggregateRoot<unknown>>(
     aggregateFactory: (id: string) => T,
-    aggregateType: string
+    aggregateType: string,
   ): EventSourcedRepository<T> {
     return new EventSourcedRepository<T>(
       aggregateFactory,
       this.eventStore,
-      aggregateType
+      aggregateType,
     );
   }
 }
