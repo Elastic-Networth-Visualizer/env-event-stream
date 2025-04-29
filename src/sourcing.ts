@@ -1,5 +1,4 @@
-// deno-lint-ignore-file require-await
-import { Event } from "./types.ts";
+import { Event, EventStore } from "./types.ts";
 import { generateId } from "./utils.ts";
 
 /**
@@ -12,14 +11,14 @@ export abstract class EventSourcedEntity<State> {
   private version: number = 0;
 
   constructor(initialState: State) {
-    this.state = initialState;
+    this.state = { ...initialState };
   }
 
   /**
    * Get the current state of the entity
    */
-  getState(): State {
-    return this.state;
+  getState(): Readonly<State> {
+    return { ...this.state };
   }
 
   /**
@@ -32,7 +31,7 @@ export abstract class EventSourcedEntity<State> {
   /**
    * Get all events that have been applied to this entity
    */
-  getEvents(): Event[] {
+  getEvents(): ReadonlyArray<Event> {
     return [...this.eventHistory];
   }
 
@@ -44,7 +43,7 @@ export abstract class EventSourcedEntity<State> {
     this.applyEvent(event);
 
     // Add to history and increment version
-    this.eventHistory.push(event);
+    this.eventHistory.push({ ...event });
     this.version++;
   }
 
@@ -119,7 +118,7 @@ export abstract class AggregateRoot<State> extends EventSourcedEntity<State> {
   /**
    * Get events that have been recorded but not yet committed
    */
-  getUncommittedEvents(): Event[] {
+  getUncommittedEvents(): ReadonlyArray<Event> {
     return [...this.uncommittedEvents];
   }
 
@@ -133,17 +132,35 @@ export abstract class AggregateRoot<State> extends EventSourcedEntity<State> {
 
 /**
  * Repository for managing event-sourced aggregates
+ * This class uses the EventStore interface for persistence
  */
 export class EventSourcedRepository<T extends AggregateRoot<unknown>> {
-  private eventStore: Map<string, Event[]> = new Map();
+  private eventStore: EventStore;
   private aggregateFactory: (id: string) => T;
+  private aggregateType: string;
 
-  constructor(aggregateFactory: (id: string) => T) {
+  /**
+   * Create a new repository for a specific aggregate type
+   * 
+   * @param aggregateFactory - Function to create a new instance of the aggregate
+   * @param eventStore - Event store implementation
+   * @param aggregateType - Type name for this aggregate (used for topic naming)
+   */
+  constructor(
+    aggregateFactory: (id: string) => T, 
+    eventStore: EventStore,
+    aggregateType: string
+  ) {
     this.aggregateFactory = aggregateFactory;
+    this.eventStore = eventStore;
+    this.aggregateType = aggregateType;
   }
 
   /**
    * Save an aggregate and its uncommitted events
+   * 
+   * @param aggregate - The aggregate to save
+   * @throws Error if there's a problem saving events
    */
   async save(aggregate: T): Promise<void> {
     const uncommittedEvents = aggregate.getUncommittedEvents();
@@ -152,34 +169,129 @@ export class EventSourcedRepository<T extends AggregateRoot<unknown>> {
       return;
     }
 
-    const aggregateId = aggregate.getId();
-
-    // Get existing events
-    const existingEvents = this.eventStore.get(aggregateId) || [];
-
-    // Add new events
-    this.eventStore.set(aggregateId, [...existingEvents, ...uncommittedEvents]);
-
-    // Mark events as committed
-    aggregate.markEventsAsCommitted();
+    try {
+      // Save each event to the event store
+      for (const event of uncommittedEvents) {
+        await this.eventStore.saveEvent(event);
+      }
+      
+      // Mark events as committed
+      aggregate.markEventsAsCommitted();
+    } catch (error) {
+      throw new Error(`Failed to save aggregate ${aggregate.getId()}: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   /**
-   * Get an aggregate by ID
+   * Get an aggregate by ID, rehydrating it from its event stream
+   * 
+   * @param id - The aggregate ID
+   * @returns The rehydrated aggregate or null if not found
    */
   async getById(id: string): Promise<T | null> {
-    const events = this.eventStore.get(id) || [];
+    try {
+      // Get all events for this aggregate
+      const topicName = this.getTopicName(id);
+      const events = await this.eventStore.getEvents(topicName);
 
-    if (events.length === 0) {
-      return null;
+      if (events.length === 0) {
+        return null;
+      }
+
+      // Create a new aggregate
+      const aggregate = this.aggregateFactory(id);
+
+      // Rehydrate from stored events
+      aggregate.rehydrate(events);
+
+      return aggregate;
+    } catch (error) {
+      throw new Error(`Failed to load aggregate ${id}: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
 
-    // Create a new aggregate
-    const aggregate = this.aggregateFactory(id);
+  /**
+   * Check if an aggregate with the given ID exists
+   * 
+   * @param id - The aggregate ID
+   * @returns True if the aggregate exists
+   */
+  async exists(id: string): Promise<boolean> {
+    const topicName = this.getTopicName(id);
+    const events = await this.eventStore.getEvents(topicName, { limit: 1 });
+    return events.length > 0;
+  }
 
-    // Rehydrate from stored events
-    aggregate.rehydrate(events);
+  /**
+   * Get events for an aggregate with optional filtering
+   * 
+   * @param id - The aggregate ID
+   * @param options - Filter options
+   * @returns Array of events
+   */
+  async getEvents(
+    id: string,
+    options: {
+      fromTimestamp?: number;
+      toTimestamp?: number;
+      limit?: number;
+      eventTypes?: string[];
+    } = {}
+  ): Promise<Event[]> {
+    const topicName = this.getTopicName(id);
+    return await this.eventStore.getEvents(topicName, options);
+  }
 
-    return aggregate;
+  /**
+   * Delete events for an aggregate before a specific timestamp
+   * Useful for implementing retention policies
+   * 
+   * @param id - The aggregate ID
+   * @param beforeTimestamp - Delete events before this timestamp
+   * @returns Number of events deleted
+   */
+  async deleteEvents(id: string, beforeTimestamp: number): Promise<number> {
+    const topicName = this.getTopicName(id);
+    return await this.eventStore.deleteEvents(topicName, beforeTimestamp);
+  }
+
+  /**
+   * Generate the topic name for an aggregate
+   * 
+   * @param id - The aggregate ID
+   * @returns The topic name
+   */
+  private getTopicName(id: string): string {
+    return `aggregate.${this.aggregateType}.${id}`;
+  }
+}
+
+/**
+ * A factory to create repositories for different aggregate types
+ * Helps to maintain consistent repository configuration
+ */
+export class RepositoryFactory {
+  private eventStore: EventStore;
+  
+  constructor(eventStore: EventStore) {
+    this.eventStore = eventStore;
+  }
+  
+  /**
+   * Create a repository for a specific aggregate type
+   * 
+   * @param aggregateFactory - Function to create a new instance of the aggregate
+   * @param aggregateType - Type name for this aggregate
+   * @returns A new repository instance
+   */
+  createRepository<T extends AggregateRoot<unknown>>(
+    aggregateFactory: (id: string) => T,
+    aggregateType: string
+  ): EventSourcedRepository<T> {
+    return new EventSourcedRepository<T>(
+      aggregateFactory,
+      this.eventStore,
+      aggregateType
+    );
   }
 }
