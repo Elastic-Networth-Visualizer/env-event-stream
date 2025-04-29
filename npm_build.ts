@@ -28,7 +28,7 @@ async function buildNpm() {
         "event-stream", 
         "event-sourcing", 
         "event-driven", 
-        "publish-subscribe", 
+        "publish-subscribe",
         "deno",
         "typescript"
       ],

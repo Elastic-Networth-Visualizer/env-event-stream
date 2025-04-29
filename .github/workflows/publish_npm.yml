@@ -22,13 +22,13 @@ jobs:
       - name: Set up Deno
         uses: denoland/setup-deno@v2
         with:
-          deno-version: v1.x
+          deno-version: v2.x
 
       # Install npm
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: '22.x'
 
       # Configure npm authentication
       - name: Configure npm authentication
@@ -42,6 +42,6 @@ jobs:
       - name: Publish to npm
         run: |
           cd npm
-          npm publish
+          npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
