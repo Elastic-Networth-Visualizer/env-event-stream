@@ -1,5 +1,3 @@
-// Main entry point for the env-event-stream library
-
 // Export types
 export type {
   Event,
@@ -10,7 +8,9 @@ export type {
   SchemaRegistry,
   EventStore,
   DeadLetterQueue,
-  DeadLetterEntry,  // Added DeadLetterEntry interface export
+  DeadLetterEntry,
+  PostgresDeadLetterQueueOptions,
+  PostgresEventStoreOptions
 } from "./src/types.ts";
 
 // Export broker implementation
@@ -19,12 +19,13 @@ export { Topic } from "./src/topic.ts";
 export { Subscription } from "./src/subscription.ts";
 
 // Export persistence implementations
-export { InMemoryEventStore, FileEventStore } from "./src/persistence.ts";
+export { InMemoryEventStore, FileEventStore, PostgresEventStore } from "./src/persistence.ts";
 
 // Export dead letter queue implementations
 export {
   SimpleDeadLetterQueue,
   FileDeadLetterQueue,
+  PostgresDeadLetterQueue
 } from "./src/deadletter.ts";
 
 // Export schema validation

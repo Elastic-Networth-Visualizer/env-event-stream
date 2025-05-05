@@ -215,7 +215,7 @@ export interface PostgresEventStoreOptions {
   /**
    * What type of id to use for the event
    */
-  idType?: 'uuid' | 'serial' | 'bigint';
+  idType?: "uuid" | "serial" | "bigint";
 }
 
 /**
@@ -239,7 +239,10 @@ export interface DeadLetterQueue {
   /**
    * Retry processing a failed event
    */
-  retryEvent(eventId: string): Promise<boolean>;
+  retryEvent(
+    eventId: string,
+    retryCallback: (event: Event, subscriptionId: string) => Promise<boolean>,
+  ): Promise<boolean>;
 
   /**
    * Remove an event from the dead letter queue

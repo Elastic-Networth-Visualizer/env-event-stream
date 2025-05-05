@@ -75,17 +75,31 @@ export class SimpleDeadLetterQueue implements DeadLetterQueue {
    * Retry processing a failed event
    * Returns true if the event was found and retried
    */
-  retryEvent(eventId: string): Promise<boolean> {
-    return new Promise((resolve) => {
-      const entry = this.entries.get(eventId);
-      if (!entry) {
-        return resolve(false);
-      }
+  async retryEvent(
+    eventId: string,
+    retryCallback: (event: Event, subscriptionId: string) => Promise<boolean>,
+  ): Promise<boolean> {
+    const entry = this.entries.get(eventId);
+    if (!entry) {
+      return false;
+    }
 
-      // Increment attempt count
+    try {
+      const success = await retryCallback(entry.event, entry.subscription);
+      if (success) {
+        this.entries.delete(eventId);
+        return true;
+      } else {
+        entry.attempts += 1;
+        entry.timestamp = Date.now();
+        return false;
+      }
+    } catch (error) {
+      entry.error = error instanceof Error ? error.message : String(error);
       entry.attempts += 1;
-      return resolve(true);
-    });
+      entry.timestamp = Date.now();
+      return false;
+    }
   }
 
   /**
@@ -185,7 +199,10 @@ export class FileDeadLetterQueue implements DeadLetterQueue {
     return entries;
   }
 
-  async retryEvent(eventId: string): Promise<boolean> {
+  async retryEvent(
+    eventId: string,
+    retryCallback: (event: Event, subscriptionId: string) => Promise<boolean>,
+  ): Promise<boolean> {
     const filename = `${this.baseDir}/${eventId}.json`;
 
     try {
@@ -193,12 +210,27 @@ export class FileDeadLetterQueue implements DeadLetterQueue {
       const content = await Deno.readTextFile(filename);
       const entry = JSON.parse(content) as DeadLetterEntry;
 
-      // Increment attempt count
-      entry.attempts += 1;
+      try {
+        const success = await retryCallback(entry.event, entry.subscription);
+        if (success) {
+          // Remove the file if retry is successful
+          await Deno.remove(filename);
+          return true;
+        }
 
-      // Update the file
-      await Deno.writeTextFile(filename, JSON.stringify(entry));
-      return true;
+        // If retry failed, increment attempts and update the file
+        entry.attempts += 1;
+        entry.timestamp = Date.now();
+        await Deno.writeTextFile(filename, JSON.stringify(entry));
+        return false;
+      } catch (error) {
+        // Update error message and attempts
+        entry.error = error instanceof Error ? error.message : String(error);
+        entry.attempts += 1;
+        entry.timestamp = Date.now();
+        await Deno.writeTextFile(filename, JSON.stringify(entry));
+        return false;
+      }
     } catch (error) {
       if (error instanceof Deno.errors.NotFound) {
         return false;
@@ -380,23 +412,76 @@ export class PostgresDeadLetterQueue implements DeadLetterQueue {
    * Retry processing a failed event
    * Returns true if the event was found and retried
    */
-  async retryEvent(eventId: string): Promise<boolean> {
+  async retryEvent(
+    eventId: string,
+    retryCallback: (event: Event, subscriptionId: string) => Promise<boolean>,
+  ): Promise<boolean> {
     await this.initialize();
 
     const client = await this.pool.connect();
     try {
-      const result = await client.queryObject(
-        `
-        UPDATE ${this.options.tableName}
-        SET attempts = attempts + 1,
-            last_updated = CURRENT_TIMESTAMP
-        WHERE event_id = $1
-        RETURNING event_id
-      `,
+      // First, get the dead letter entry
+      const getResult = await client.queryObject<{
+        event_data: string;
+        subscription: string;
+        attempts: number;
+      }>(
+        `SELECT event_data, subscription, attempts FROM ${this.options.tableName} WHERE event_id = $1`,
         [eventId],
       );
 
-      return result.rows.length > 0;
+      if (getResult.rows.length === 0) {
+        return false;
+      }
+
+      const row = getResult.rows[0];
+      const event = JSON.parse(row.event_data) as Event;
+      const subscriptionId = row.subscription;
+
+      try {
+        // Use the callback to retry the event
+        const success = await retryCallback(event, subscriptionId);
+
+        if (success) {
+          // If retry was successful, remove the entry from the database
+          await client.queryObject(
+            `DELETE FROM ${this.options.tableName} WHERE event_id = $1`,
+            [eventId],
+          );
+          return true;
+        } else {
+          // If retry failed, increment the attempts counter
+          await client.queryObject(
+            `
+          UPDATE ${this.options.tableName}
+          SET attempts = attempts + 1,
+              timestamp = $1,
+              last_updated = CURRENT_TIMESTAMP
+          WHERE event_id = $2
+          `,
+            [Date.now(), eventId],
+          );
+          return false;
+        }
+      } catch (error) {
+        // Update error information and increment attempts
+        await client.queryObject(
+          `
+        UPDATE ${this.options.tableName}
+        SET attempts = attempts + 1,
+            error = $1,
+            timestamp = $2,
+            last_updated = CURRENT_TIMESTAMP
+        WHERE event_id = $3
+        `,
+          [
+            error instanceof Error ? error.message : String(error),
+            Date.now(),
+            eventId,
+          ],
+        );
+        return false;
+      }
     } finally {
       client.release();
     }
