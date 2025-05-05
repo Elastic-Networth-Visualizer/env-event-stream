@@ -204,6 +204,21 @@ export interface EventStore {
 }
 
 /**
+ * Interface for the postgres event store options
+ */
+export interface PostgresEventStoreOptions {
+  /**
+   * The table name to use for storing events
+   */
+  tableName?: string;
+
+  /**
+   * What type of id to use for the event
+   */
+  idType?: 'uuid' | 'serial' | 'bigint';
+}
+
+/**
  * Interface for the dead letter queue
  */
 export interface DeadLetterQueue {
@@ -231,3 +246,8 @@ export interface DeadLetterQueue {
    */
   removeEvent(eventId: string): Promise<boolean>;
 }
+
+/**
+ * Interface for the postgres dead letter queue options
+ */
+export interface PostgresDeadLetterQueueOptions extends PostgresEventStoreOptions {}
