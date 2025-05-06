@@ -1,6 +1,6 @@
 {
   "name": "@env/env-event-stream",
-  "version": "0.2.9",
+  "version": "0.3.0",
   "description": "A high-performance, feature-rich event stream library for Deno, the backbone for event-driven architectures",
   "author": "Elastic Networth Visualizer",
   "license": "MIT",
