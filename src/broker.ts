@@ -159,6 +159,28 @@ export class EventBroker {
 
     return events.length;
   }
+
+  /**
+   * Retry processing a failed event from the dead letter queue
+   */
+  retryDeadLetterEvent(eventId: string): Promise<boolean> {
+    const retryCallback = async (event: Event, subscriptionId: string) => {
+      const topic = this.getTopic(event.topic);
+      if (!topic) {
+        throw new Error(`Topic ${event.topic} not found for retry of event ${eventId}`);
+      }
+
+      const subscription = topic.getSubscriptions().find((sub) => sub.getId() === subscriptionId);
+      if (!subscription) {
+        throw new Error(`Subscription ${subscriptionId} not found for retry of event ${eventId}`);
+      }
+
+      await subscription.deliver(event);
+      return true;
+    };
+
+    return this.deadLetterQueue.retryEvent(eventId, retryCallback);
+  }
 }
 
 // Create default singleton instance

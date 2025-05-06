@@ -1,4 +1,4 @@
-import { assertEquals, assertExists } from "https://deno.land/std@0.182.0/testing/asserts.ts";
+import { assertEquals, assertExists } from "@std/assert";
 import { EventBroker } from "../src/broker.ts";
 import { Event } from "../src/types.ts";
 

@@ -1,4 +1,10 @@
-import { DeadLetterEntry, DeadLetterQueue, Event } from "./types.ts";
+import { Pool } from "@db/postgres";
+import {
+  DeadLetterEntry,
+  DeadLetterQueue,
+  Event,
+  PostgresDeadLetterQueueOptions,
+} from "./types.ts";
 
 /**
  * In-memory implementation of a dead letter queue
@@ -69,17 +75,31 @@ export class SimpleDeadLetterQueue implements DeadLetterQueue {
    * Retry processing a failed event
    * Returns true if the event was found and retried
    */
-  retryEvent(eventId: string): Promise<boolean> {
-    return new Promise((resolve) => {
-      const entry = this.entries.get(eventId);
-      if (!entry) {
-        return resolve(false);
-      }
+  async retryEvent(
+    eventId: string,
+    retryCallback: (event: Event, subscriptionId: string) => Promise<boolean>,
+  ): Promise<boolean> {
+    const entry = this.entries.get(eventId);
+    if (!entry) {
+      return false;
+    }
 
-      // Increment attempt count
+    try {
+      const success = await retryCallback(entry.event, entry.subscription);
+      if (success) {
+        this.entries.delete(eventId);
+        return true;
+      } else {
+        entry.attempts += 1;
+        entry.timestamp = Date.now();
+        return false;
+      }
+    } catch (error) {
+      entry.error = error instanceof Error ? error.message : String(error);
       entry.attempts += 1;
-      return resolve(true);
-    });
+      entry.timestamp = Date.now();
+      return false;
+    }
   }
 
   /**
@@ -179,7 +199,10 @@ export class FileDeadLetterQueue implements DeadLetterQueue {
     return entries;
   }
 
-  async retryEvent(eventId: string): Promise<boolean> {
+  async retryEvent(
+    eventId: string,
+    retryCallback: (event: Event, subscriptionId: string) => Promise<boolean>,
+  ): Promise<boolean> {
     const filename = `${this.baseDir}/${eventId}.json`;
 
     try {
@@ -187,12 +210,27 @@ export class FileDeadLetterQueue implements DeadLetterQueue {
       const content = await Deno.readTextFile(filename);
       const entry = JSON.parse(content) as DeadLetterEntry;
 
-      // Increment attempt count
-      entry.attempts += 1;
+      try {
+        const success = await retryCallback(entry.event, entry.subscription);
+        if (success) {
+          // Remove the file if retry is successful
+          await Deno.remove(filename);
+          return true;
+        }
 
-      // Update the file
-      await Deno.writeTextFile(filename, JSON.stringify(entry));
-      return true;
+        // If retry failed, increment attempts and update the file
+        entry.attempts += 1;
+        entry.timestamp = Date.now();
+        await Deno.writeTextFile(filename, JSON.stringify(entry));
+        return false;
+      } catch (error) {
+        // Update error message and attempts
+        entry.error = error instanceof Error ? error.message : String(error);
+        entry.attempts += 1;
+        entry.timestamp = Date.now();
+        await Deno.writeTextFile(filename, JSON.stringify(entry));
+        return false;
+      }
     } catch (error) {
       if (error instanceof Deno.errors.NotFound) {
         return false;
@@ -213,5 +251,269 @@ export class FileDeadLetterQueue implements DeadLetterQueue {
       }
       throw error;
     }
+  }
+}
+
+/**
+ * PostgreSQL-based dead letter queue implementation for production use.
+ * Provides scalable, durable storage with robust filtering and retry capabilities
+ */
+export class PostgresDeadLetterQueue implements DeadLetterQueue {
+  private pool: Pool;
+  private isInitialized = false;
+  private options: PostgresDeadLetterQueueOptions;
+
+  constructor(pool: Pool, options: PostgresDeadLetterQueueOptions = {
+    tableName: "events_dlq",
+    idType: "uuid",
+  }) {
+    this.pool = pool;
+    this.options = options;
+  }
+
+  /**
+   * Initialize the database schema if needed
+   */
+  private async initialize(): Promise<void> {
+    if (this.isInitialized) {
+      return;
+    }
+
+    const client = await this.pool.connect();
+    try {
+      // Create the dead letter queue table if it doesn't exist
+      await client.queryObject(`
+        CREATE TABLE IF NOT EXISTS ${this.options.tableName} (
+          event_id TEXT PRIMARY KEY,
+          event_data JSONB NOT NULL,
+          error TEXT NOT NULL,
+          subscription TEXT NOT NULL,
+          timestamp BIGINT NOT NULL,
+          attempts INTEGER NOT NULL DEFAULT 1,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      // Create indexes for faster querying
+      await client.queryObject(`
+        CREATE INDEX IF NOT EXISTS dlq_topic_idx ON ${this.options.tableName} ((event_data->>'topic'));
+        CREATE INDEX IF NOT EXISTS dlq_type_idx ON ${this.options.tableName} ((event_data->>'type'));
+        CREATE INDEX IF NOT EXISTS dlq_timestamp_idx ON ${this.options.tableName} (timestamp);
+        CREATE INDEX IF NOT EXISTS dlq_subscription_idx ON ${this.options.tableName} (subscription);  
+      `);
+
+      this.isInitialized = true;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Add a failed event to the dead letter queue
+   */
+  async addEvent(event: Event, error: Error, subscriptionName: string): Promise<void> {
+    await this.initialize();
+
+    const client = await this.pool.connect();
+    try {
+      const query = `
+        INSERT INTO ${this.options.tableName} (event_id, event_data, error, subscription, timestamp, attempts)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (event_id) DO UPDATE
+        SET attempts = ${this.options.idType === "uuid" ? "attempts + 1" : "attempts"},
+          error = $3,
+          last_updated = CURRENT_TIMESTAMP
+      `;
+
+      await client.queryObject(query, [
+        event.id,
+        JSON.stringify(event),
+        error.message,
+        subscriptionName,
+        Date.now(),
+        this.options.idType === "uuid" ? 1 : 0,
+      ]);
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Get failed events from the queue with optional filtering
+   */
+  async getEvents(
+    options: {
+      topic?: string;
+      eventType?: string;
+      limit?: number;
+    } = {},
+  ): Promise<DeadLetterEntry[]> {
+    await this.initialize();
+
+    const client = await this.pool.connect();
+    try {
+      // Build the query with parameters
+      let queryText = `
+        SELECT event_id, event_data, error, subscription, timestamp, attempts
+        FROM ${this.options.tableName}
+        WHERE 1=1
+      `;
+
+      const queryParams: Array<string | number> = [];
+      let paramIndex = 1;
+
+      // Add topic filter if specified
+      if (options.topic) {
+        queryText += ` AND event_data->>'topic' = $${paramIndex}`;
+        queryParams.push(options.topic);
+        paramIndex++;
+      }
+
+      // Add event type filter if specified
+      if (options.eventType) {
+        queryText += ` AND event_data->>'type' = $${paramIndex}`;
+        queryParams.push(options.eventType);
+        paramIndex++;
+      }
+
+      // Order by timestamp (newest first)
+      queryText += ` ORDER BY timestamp DESC`;
+
+      // Add limit if specified
+      if (options.limit) {
+        queryText += ` LIMIT $${paramIndex}`;
+        queryParams.push(options.limit);
+      }
+
+      const result = await client.queryObject<{
+        event_id: string;
+        event_data: string;
+        error: string;
+        subscription: string;
+        timestamp: number;
+        attempts: number;
+      }>(queryText, queryParams);
+
+      // Convert rows to DeadLetterEntry objects
+      return result.rows.map((row) => ({
+        event: JSON.parse(row.event_data),
+        error: row.error,
+        subscription: row.subscription,
+        timestamp: row.timestamp,
+        attempts: row.attempts,
+      }));
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Retry processing a failed event
+   * Returns true if the event was found and retried
+   */
+  async retryEvent(
+    eventId: string,
+    retryCallback: (event: Event, subscriptionId: string) => Promise<boolean>,
+  ): Promise<boolean> {
+    await this.initialize();
+
+    const client = await this.pool.connect();
+    try {
+      // First, get the dead letter entry
+      const getResult = await client.queryObject<{
+        event_data: string;
+        subscription: string;
+        attempts: number;
+      }>(
+        `SELECT event_data, subscription, attempts FROM ${this.options.tableName} WHERE event_id = $1`,
+        [eventId],
+      );
+
+      if (getResult.rows.length === 0) {
+        return false;
+      }
+
+      const row = getResult.rows[0];
+      const event = JSON.parse(row.event_data) as Event;
+      const subscriptionId = row.subscription;
+
+      try {
+        // Use the callback to retry the event
+        const success = await retryCallback(event, subscriptionId);
+
+        if (success) {
+          // If retry was successful, remove the entry from the database
+          await client.queryObject(
+            `DELETE FROM ${this.options.tableName} WHERE event_id = $1`,
+            [eventId],
+          );
+          return true;
+        } else {
+          // If retry failed, increment the attempts counter
+          await client.queryObject(
+            `
+          UPDATE ${this.options.tableName}
+          SET attempts = attempts + 1,
+              timestamp = $1,
+              last_updated = CURRENT_TIMESTAMP
+          WHERE event_id = $2
+          `,
+            [Date.now(), eventId],
+          );
+          return false;
+        }
+      } catch (error) {
+        // Update error information and increment attempts
+        await client.queryObject(
+          `
+        UPDATE ${this.options.tableName}
+        SET attempts = attempts + 1,
+            error = $1,
+            timestamp = $2,
+            last_updated = CURRENT_TIMESTAMP
+        WHERE event_id = $3
+        `,
+          [
+            error instanceof Error ? error.message : String(error),
+            Date.now(),
+            eventId,
+          ],
+        );
+        return false;
+      }
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Remove an event from the dead letter queue
+   */
+  async removeEvent(eventId: string): Promise<boolean> {
+    await this.initialize();
+
+    const client = await this.pool.connect();
+    try {
+      const result = await client.queryObject(
+        `
+        DELETE FROM ${this.options.tableName}
+        WHERE event_id = $1
+        RETURNING event_id
+      `,
+        [eventId],
+      );
+
+      return result.rows.length > 0;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Close the database connection pool
+   */
+  async close(): Promise<void> {
+    await this.pool.end();
   }
 }

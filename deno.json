@@ -38,9 +38,6 @@
     "build:npm": "deno run --allow-read --allow-write --allow-env --allow-net --allow-run npm_build.ts"
   },
   "exports": "./mod.ts",
-  "dependencies": {
-    "@std/assert": "jsr:@std/assert@1"
-  },
   "publish": {
     "exclude": [
       "npm_build.ts",
@@ -50,5 +47,10 @@
       "npm",
       ".git"
     ]
+  },
+  "imports": {
+    "@db/postgres": "jsr:@db/postgres@^0.19.5",
+    "@std/assert": "jsr:@std/assert@^1.0.13",
+    "@std/testing": "jsr:@std/testing@^1.0.11"
   }
 }

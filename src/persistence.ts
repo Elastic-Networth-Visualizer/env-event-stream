@@ -1,4 +1,5 @@
-import { Event, EventStore } from "./types.ts";
+import { Pool } from "@db/postgres";
+import { Event, EventStore, PostgresEventStoreOptions } from "./types.ts";
 
 /**
  * In-memory implementation of event storage.
@@ -229,5 +230,204 @@ export class FileEventStore implements EventStore {
       }
       throw error;
     }
+  }
+}
+
+/**
+ * PostgreSQL-based event store implementation for production use
+ * Provides scalable, durable storage with robust querying capabilities
+ */
+export class PostgresEventStore implements EventStore {
+  private pool: Pool;
+  private isInitialized: boolean = false;
+  private readonly options: Required<PostgresEventStoreOptions>;
+
+  /**
+   * Create a new PostgreSQL event store
+   * @param connectionString - Connection string for the PostgreSQL database
+   */
+  constructor(connectionString: string, options: PostgresEventStoreOptions = {
+    tableName: "events",
+    idType: "uuid",
+  }) {
+    this.pool = new Pool(connectionString, 10, true);
+    this.options = options as Required<PostgresEventStoreOptions>;
+  }
+
+  /**
+   * Initialize the database schema if needed
+   */
+  private async initialize(): Promise<void> {
+    if (this.isInitialized) {
+      return;
+    }
+
+    const client = await this.pool.connect();
+    try {
+      // Create the events table if it doesn't exist
+      await client.queryObject(`
+        CREATE TABLE IF NOT EXISTS ${this.options.tableName} (
+          id ${this.options.idType.toUpperCase()} PRIMARY KEY,
+          topic TEXT NOT NULL,
+          type TEXT NOT NULL,
+          timestamp BIGINT NOT NULL,
+          schema_version TEXT NOT NULL,
+          payload JSONB NOT NULL,
+          metadata JSONB,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      // Create indexes for efficient querying
+      const prefix = this.options.tableName.toLocaleLowerCase();
+      await client.queryObject(`
+        CREATE INDEX IF NOT EXISTS ${prefix}_topic_idx ON ${this.options.tableName} (topic);
+        CREATE INDEX IF NOT EXISTS ${prefix}_timestamp_idx ON ${this.options.tableName} (timestamp);
+        CREATE INDEX IF NOT EXISTS ${prefix}_type_idx ON ${this.options.tableName} (type);
+        CREATE INDEX IF NOT EXISTS ${prefix}_topic_timestamp_idx ON ${this.options.tableName} (topic, timestamp);
+      `);
+
+      this.isInitialized = true;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Save an event to PostgreSQL
+   */
+  async saveEvent(event: Event): Promise<void> {
+    await this.initialize();
+
+    const client = await this.pool.connect();
+    try {
+      await client.queryObject(
+        `
+        INSERT INTO ${this.options.tableName} (id, topic, type, timestamp, schema_version, payload, metadata)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `,
+        [
+          event.id,
+          event.topic,
+          event.type,
+          event.timestamp,
+          event.schemaVersion,
+          JSON.stringify(event.payload),
+          JSON.stringify(event.metadata),
+        ],
+      );
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Get events for a topic with optional filtering
+   */
+  async getEvents(
+    topic: string,
+    options?: {
+      fromTimestamp?: number;
+      toTimestamp?: number;
+      limit?: number;
+      eventTypes?: string[];
+    },
+  ): Promise<Event[]> {
+    await this.initialize();
+
+    const client = await this.pool.connect();
+    try {
+      // Build the query with parameters
+      let queryText = `
+        SELECT id, topic, type, timestamp, schema_version, payload, metadata
+        FROM ${this.options.tableName}
+        WHERE topic = $1
+      `;
+
+      const queryParams: unknown[] = [topic];
+      let paramIndex = 2;
+
+      // Add timestamp filters if specified
+      if (options?.fromTimestamp) {
+        queryText += ` AND timestamp >= $${paramIndex}`;
+        queryParams.push(options.fromTimestamp);
+        paramIndex++;
+      }
+
+      if (options?.toTimestamp) {
+        queryText += ` AND timestamp <= $${paramIndex}`;
+        queryParams.push(options.toTimestamp);
+        paramIndex++;
+      }
+
+      // Add event type filters if specified
+      if (options?.eventTypes?.length) {
+        queryText += ` AND type = ANY($${paramIndex}::text[])`;
+        queryParams.push(options.eventTypes);
+        paramIndex++;
+      }
+
+      // Order by timestamp
+      queryText += ` ORDER BY timestamp ASC`;
+
+      // Add limit if specified
+      if (options?.limit) {
+        queryText += ` LIMIT $${paramIndex}`;
+        queryParams.push(options.limit);
+      }
+
+      const result = await client.queryObject<{
+        id: string;
+        topic: string;
+        type: string;
+        timestamp: number;
+        schema_version: string;
+        payload: string;
+        metadata: string | null;
+      }>(queryText, queryParams);
+
+      // Convert rows to Event objects
+      return result.rows.map((row) => ({
+        id: row.id,
+        topic: row.topic,
+        type: row.type,
+        timestamp: row.timestamp,
+        schemaVersion: row.schema_version,
+        payload: JSON.parse(row.payload),
+        metadata: row.metadata ? JSON.parse(row.metadata) : null,
+      }));
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Delete events before a specific timestamp
+   */
+  async deleteEvents(topic: string, beforeTimestamp: number): Promise<number> {
+    await this.initialize();
+
+    const client = await this.pool.connect();
+    try {
+      const result = await client.queryObject(
+        `
+        DELETE FROM ${this.options.tableName}
+        WHERE topic = $1 AND timestamp < $2
+        RETURNING COUNT(*);
+      `,
+        [topic, beforeTimestamp],
+      );
+
+      return result.rowCount || 0;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Close the connection pool
+   */
+  async close(): Promise<void> {
+    await this.pool.end();
   }
 }
