@@ -626,11 +626,6 @@ describe("PostgresDeadLetterQueue", () => {
         return { rows: [] };
       }
       return { rows: [{ event_id: "test-event-1" }] };
-      if (params[0] !== "test-event-1") {
-        return { rows: [] };
-      } else {
-        return { rows: [{ event_id: "test-event-1" }] };
-      }
     };
 
     const removed = await dlq.removeEvent("test-event-1");
