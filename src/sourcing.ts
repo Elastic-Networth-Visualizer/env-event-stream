@@ -68,7 +68,9 @@ export abstract class EventSourcedEntity<State> {
 }
 
 /**
- * Aggregate root representing a collection of entities managed through event sourcing
+ * Aggregate root representing a collection of entities managed as a single unit
+ * This class extends EventSourcedEntity to provide additional functionality
+ * such as event recording and uncommitted event management
  */
 export abstract class AggregateRoot<State> extends EventSourcedEntity<State> {
   private id: string;
