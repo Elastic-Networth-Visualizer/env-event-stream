@@ -1,5 +1,5 @@
 /**
- * Basic event interface that all events should implement
+ * Basic interface that all events should implement
  */
 export interface Event<T = unknown> {
   /**
