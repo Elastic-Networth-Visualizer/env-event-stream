@@ -21,7 +21,7 @@ event-driven architectures.
 ## Overview
 
 The `env-event-stream` library provides a robust foundation for building event-driven applications
-with Deno. Whether you're implementing a distributed system, microservices architecture, or just
+with Deno and Node.js. Whether you're implementing a distributed system, microservices architecture, or just
 need a reliable way to handle application events, this library offers the tools you need.
 
 ### Core Features
